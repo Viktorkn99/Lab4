@@ -1,166 +1,139 @@
-package se.kth.viktorine.lab4sudoku.View;
+package se.kth.viktorine.labb4fx.vy;
 
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
-import se.kth.viktorine.lab4sudoku.Model.SudokuBoard;
-
-import static se.kth.viktorine.lab4sudoku.SudokuUtilities.GRID_SIZE;
+import se.kth.viktorine.labb4fx.model.SudokuBoard;
+import se.kth.viktorine.labb4fx.model.SudokuUtilities;
 
 public class SudokuView extends VBox {
-    private Controller controller;
-    private SudokuBoard model;
-    private GridView gridView = new GridView(this);
-    private MenuBar menuBar;
-    private MenuItem loadGame;
-    private MenuItem saveGame;
-    private MenuItem exit;
-    private MenuItem newGame;
-    private MenuItem difficulty;
-    private MenuItem clearAll;
-    private MenuItem check;
-    private MenuItem rules;
-    private Button[] selectButtons;
-    private Button hint;
-    private Button check2;
-    private VBox numberSelector;
-    private VBox actionButtons;
 
+    private final SudokuBoard model;
+    private Controller controller = null;
+    private final GridView gridView;
+
+    private final MenuItem loadGame = new MenuItem("Load Game");
+    private final MenuItem saveGame = new MenuItem("Save Game");
+    private final MenuItem newGame = new MenuItem("New Game");
+    private final Menu difficultyMenu = new Menu("Difficulty");
+    private final MenuItem easyItem = new MenuItem("Easy");
+    private final MenuItem mediumItem = new MenuItem("Medium");
+    private final MenuItem hardItem = new MenuItem("Hard");
+    private final MenuItem check = new MenuItem("Check");
+    private final MenuItem rules = new MenuItem("Rules");
+    private final MenuItem clearAll = new MenuItem("Start over on the same board");
 
     public SudokuView(SudokuBoard model) {
-        super();
-        this.controller = new Controller(this);
         this.model = model;
+        this.controller = new Controller(this, model);
+        this.gridView = new GridView(controller);
 
-        loadGame = new MenuItem("Load game");
-        saveGame = new MenuItem("Save game");
-        exit = new MenuItem("Exit");
-
-        newGame = new MenuItem("New game");
-        difficulty = new MenuItem("Choose difficulty");
-
-        clearAll = new MenuItem("Clear all");
-        check = new MenuItem("Check");
-        rules = new MenuItem("Rules");
-
-        check2 = new Button("Check");
-        hint = new Button("Hint");
-
-        selectButtons = new Button[10];
-
-        numberSelector = createNumberSelector();
-        actionButtons = createActionButtons();
-        menuBar = createMenuBar();
-
+        MenuBar menuBar = createMenuBar();
         this.getChildren().addAll(menuBar, createMainLayout());
-
     }
 
+    /**
+     * Refresh the Sudoku grid based on the current model state.
+     * Used to update the visual board after changes.
+     */
+
+    public void refreshBoard() {
+        gridView.updateGrid(model.getCells());
+    }
+
+    /**
+     * Create the main layout including the grid, number selector, and action buttons.
+     *
+     * @return a BorderPane containing the main UI components
+     */
 
     private BorderPane createMainLayout() {
         BorderPane layout = new BorderPane();
         layout.setCenter(gridView.getNumberPane());
-        layout.setRight(numberSelector);
-        layout.setLeft(actionButtons);
+        layout.setRight(createNumberSelector());
+        layout.setLeft(createActionButtons());
         return layout;
     }
 
+    /**
+     * Create the menu bar with the options file, game and help and their sub menus.
+     *
+     * @return a MenuBar with configured options and their actions
+     */
+
     private MenuBar createMenuBar() {
-        MenuBar menuBar = new MenuBar();
         Menu fileMenu = new Menu("File");
         Menu gameMenu = new Menu("Game");
         Menu helpMenu = new Menu("Help");
 
-        loadGame.setOnAction(buttonClickHandler);
-        saveGame.setOnAction(buttonClickHandler);
-        exit.setOnAction(buttonClickHandler);
-        fileMenu.getItems().addAll(loadGame, saveGame, exit);
+        fileMenu.getItems().addAll(loadGame, saveGame);
+        loadGame.setOnAction(e -> controller.loadGame());
+        saveGame.setOnAction(e -> controller.saveGame());
 
-        newGame.setOnAction(buttonClickHandler);
-        difficulty.setOnAction(buttonClickHandler);
-        gameMenu.getItems().addAll(newGame, difficulty);
+        difficultyMenu.getItems().addAll(easyItem, mediumItem, hardItem);            // ta reda på hur easyItem funkar!
+        easyItem.setOnAction (e -> controller.newGame(SudokuUtilities.SudokuLevel.EASY));
+        mediumItem.setOnAction (e -> controller.newGame(SudokuUtilities.SudokuLevel.MEDIUM));
+        hardItem.setOnAction (e -> controller.newGame(SudokuUtilities.SudokuLevel.HARD));
 
-        clearAll.setOnAction(buttonClickHandler);
-        check.setOnAction(buttonClickHandler);
-        rules.setOnAction(buttonClickHandler);
-        helpMenu.getItems().addAll(clearAll, check, rules);
 
-        menuBar.getMenus().add(fileMenu);
-        menuBar.getMenus().add(gameMenu);
-        menuBar.getMenus().add(helpMenu);
-        return menuBar;
+        gameMenu.getItems().addAll(newGame, difficultyMenu);
+        newGame.setOnAction(e -> controller.newGame());
+
+
+        helpMenu.getItems().addAll(check, rules, clearAll);
+        check.setOnAction(e -> controller.onCheckPressed());
+        rules.setOnAction(e -> controller.onRulesPressed());
+        clearAll.setOnAction(e -> controller.onClearAllPressed());
+
+        MenuBar bar = new MenuBar(fileMenu, gameMenu, helpMenu);
+        return bar;
     }
 
+    /**
+     * Create the number selector used to fill cells in the Sudoku grid.
+     * Includes buttons for numbers 1–9 and a clear button.
+     *
+     * @return a VBox containing number buttons and a clear button
+     */
 
     private VBox createNumberSelector() {
-        VBox numberSelector = new VBox(5);
+        VBox box = new VBox(5);
 
-        for (int i = 0; i < 10; i++) {
-            if(i == 9) {
-                selectButtons[9] = new Button("C");
-                selectButtons[9].setOnAction(buttonClickHandler);
-            }
-            else {
-                selectButtons[i] = new Button(String.valueOf(i+1));
-                selectButtons[i].setOnAction(buttonClickHandler);
-            }
-
-            selectButtons[i].setMinSize(32, 32);
-            numberSelector.getChildren().add(selectButtons[i]);
+        for (int i = 1; i <= 9; i++) {
+            Button btn = new Button(String.valueOf(i));
+            btn.setMinSize(32, 32);
+            int n = i;
+            btn.setOnAction(e -> controller.onNumberSelected(n));
+            box.getChildren().add(btn);
         }
-        return numberSelector;
+
+        Button clear = new Button("C");
+        clear.setMinSize(32, 32);
+        clear.setOnAction(e -> controller.onNumberSelected(0));
+        box.getChildren().add(clear);
+
+        return box;
     }
+
+    /**
+     * Create the action buttons for the player to check the puzzle or request a hint.
+     *
+     * @return a VBox containing the "Check" and "Hint" buttons
+     */
 
     private VBox createActionButtons() {
-        VBox actionButtons = new VBox(10);
-        //Button checkButton = new Button("Check");
-        //Button hintButton = new Button("Hint");
-        check2.setMinSize(60, 30);
-        hint.setMinSize(60, 30);
+        VBox box = new VBox(10);
+        Button check = new Button("Check");
+        Button hint  = new Button("Hint");
+        check.setMinSize(60,30);
+        hint.setMinSize(60,30);
 
-        hint.setOnAction(buttonClickHandler);
-        check2.setOnAction(buttonClickHandler);
-        actionButtons.getChildren().addAll(check2, hint);
-        return actionButtons;
+        check.setOnAction(e -> controller.onCheckPressed());
+        hint.setOnAction(e -> controller.onHintPressed());
+        box.getChildren().addAll(check, hint);
+        return box;
     }
-
-
-
-    private EventHandler<ActionEvent> buttonClickHandler = new EventHandler<ActionEvent>() {
-
-        @Override
-        public void handle(ActionEvent event) {
-            if(event.getSource() == newGame) controller.onNewGamePressed();
-
-            if(event.getSource() == difficulty) controller.onDifficultyPressed();
-
-            if(event.getSource() == loadGame) controller.onLoadGamePressed();
-
-            if(event.getSource() == saveGame) controller.onSaveGamePressed();
-
-            if(event.getSource() == exit) controller.onExitPressed();
-
-            if(event.getSource() == clearAll) controller.onClearAllPressed();
-
-            if(event.getSource() == check) controller.onCheckPressed();
-
-            if(event.getSource() == rules) controller.onRulesPressed();
-
-            if(event.getSource() == hint) controller.onHintPressed();
-
-            if(event.getSource() == check2) controller.onCheckPressed();
-
-            for (int i = 0; i < 9; i++) {
-                    if(event.getSource() == selectButtons[i]) controller.onButtonPressed(i + 1);
-            }
-
-            if(event.getSource() == selectButtons[9]) controller.onClearButtonPressed();
-        }
-    };
-
 }
