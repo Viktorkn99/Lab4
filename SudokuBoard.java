@@ -1,14 +1,15 @@
-package Model;
+package se.kth.viktorine.labb4fx.model;
 
-import java.util.Arrays;
+import javax.swing.*;
+import java.io.*;
 import java.util.Random;
 
-public class SudokuBoard {
+public class SudokuBoard implements Serializable {
 
     private final SudokuCell[][] cells;
 
     public SudokuBoard() {
-        this.cells = new SudokuCell[9][9];
+        this.cells = new SudokuCell[SudokuUtilities.GRID_SIZE][SudokuUtilities.GRID_SIZE];
     }
 
     public void initBoard(SudokuUtilities.SudokuLevel level) {
@@ -61,7 +62,7 @@ public class SudokuBoard {
             for (int j = 0; j < cells[i].length; j++) {
                 SudokuCell original = cells[i][j];
                 copy[i][j] = new SudokuCell(original.getId(), original.getCorrectValue(), original.isShow());
-                //copy[i][j].setValue(original.getValue());
+                copy[i][j].setValue(original.getValue());
             }
         }
         return copy;
@@ -69,7 +70,7 @@ public class SudokuBoard {
 
     public void clearBoard() {
         for (int i = 0; i < cells.length; i++) {
-            for (int j = 0; j < cells[i].length; i++) {
+            for (int j = 0; j < cells[i].length; j++) {
                 if (!cells[i][j].isShow()){
                     cells[i][j].setValue(0);
                 }
@@ -79,10 +80,10 @@ public class SudokuBoard {
 
     public boolean checkCorrect(){
         for (int i = 0; i < cells.length; i++) {
-            for (int j = 0; j < cells[i].length; i++) {
+            for (int j = 0; j < cells[i].length; j++) {
                 if (!(cells[i][j].getValue() == 0)){
                     if (!(cells[i][j].getValue() == cells[i][j].getCorrectValue())) {
-                    return false;
+                        return false;
                     }
                 }
             }
@@ -104,6 +105,19 @@ public class SudokuBoard {
         }
     }
 
+    public boolean isSolved() {
+        for (int r = 0; r < cells.length; r++) {
+            for (int c = 0; c < cells[r].length; c++) {
+                SudokuCell cell = cells[r][c];
+                if (cell.getValue() == 0)
+                    return false;
+                if (cell.getValue() != cell.getCorrectValue())
+                    return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -117,7 +131,43 @@ public class SudokuBoard {
 
         return sb.toString();
     }
+
+    public void SerializeToFile(SudokuCell[][] board) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Save Game");
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Sudoku-files (*.sudoku)", "sudoku"));
+
+        int result = fileChooser.showSaveDialog(null);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            if (!file.getName().endsWith(".sudoku")) {
+                file = new File(file.getAbsolutePath() + ".sudoku");
+            }
+
+            try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
+                out.writeObject(board);
+            } catch (IOException e) {
+                e.printStackTrace(); // möjligtvis inte catcha här med då
+                                      //behöver vi reda ut hur man throwar efter varje anropning, hela vägen till buttonevent handle
+            }
+        }
+    }
+
+    public SudokuCell[][] deSerializeFromFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Load Game");
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Sudoku-files (*.sudoku)", "sudoku"));
+
+        int result = fileChooser.showSaveDialog(null);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+
+            try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+                return (SudokuCell[][]) in.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace(); // Samma sak här
+            }
+        }
+        return null;
+    }
 }
-
-
-public void fileReader () throws 
